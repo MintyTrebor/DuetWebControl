@@ -37,6 +37,7 @@
 'use strict'
 
 import Chart from 'chart.js'
+import dateFnsLocale from 'date-fns/locale/en-US'
 import { mapState, mapGetters } from 'vuex'
 
 import i18n from '../../i18n'
@@ -117,7 +118,6 @@ export default {
 		...mapGetters('machine', ['hasTemperaturesToDisplay']),
 		...mapGetters('machine/model', ['maxHeaterTemperature']),
 		...mapState('machine/model', ['heat']),
-		...mapState('machine/settings', ['displayedExtraTemperatures']),
 		...mapState('settings', ['darkTheme'])
 	},
 	data() {
@@ -174,6 +174,11 @@ export default {
 			scales: {
 				xAxes: [
 					{
+						adapters: {
+							date: {
+								locale: dateFnsLocale
+							}
+						},
 						gridLines: {
 							color: 'rgba(0,0,0,0.2)',
 							display: true
@@ -225,7 +230,7 @@ export default {
 		};
 
 		// Create the dataset if necessary
-		if (tempSamples[this.selectedMachine] === undefined) {
+		if (!tempSamples[this.selectedMachine]) {
 			tempSamples[this.selectedMachine] = {
 				times: [],
 				temps: []
@@ -280,7 +285,7 @@ export default {
 
 					// Deal with visibility and tell chart instances to update
 					dataset.temps.forEach(function(dataset) {
-						dataset.showLine = !dataset.extra || (this.displayedExtraTemperatures.indexOf(dataset.index) !== -1);
+						dataset.showLine = !dataset.extra || (machines[hostname].settings.displayedExtraTemperatures.indexOf(dataset.index) !== -1);
 					}, this);
 					instances.forEach(instance => instance.update());
 				}

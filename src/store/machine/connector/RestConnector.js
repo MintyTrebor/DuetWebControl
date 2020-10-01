@@ -22,7 +22,17 @@ export default class RestConnector extends BaseConnector {
 				const model = JSON.parse(e.data);
 				resolve(model);
 			};
-			socket.onerror = socket.onclose = function(e) {
+			socket.onerror = function(e) {
+				if (e.code === 1001 || e.code == 1011) {
+					// DCS unavailable or incompatible DCS version
+					reject(new LoginError(e.reason));
+				} else {
+					// TODO accomodate InvalidPasswordError and NoFreeSessionError here
+					reject(new NetworkError(e.reason));
+				}
+				socket.close();
+			};
+			socket.onclose = function(e) {
 				if (e.code === 1001 || e.code == 1011) {
 					// DCS unavailable or incompatible DCS version
 					reject(new LoginError(e.reason));
@@ -42,7 +52,7 @@ export default class RestConnector extends BaseConnector {
 	constructor(hostname, password, socket, model) {
 		super('rest', hostname);
 		this.password = password;
-		this.requestBase = `${location.protocol}//${hostname}/`;
+		this.requestBase = `${location.protocol}//${(hostname === location.host) ? hostname + process.env.BASE_URL : hostname + '/'}`;
 		this.socket = socket;
 		this.model = model;
 		if (model.job && model.job.layers) {
@@ -50,7 +60,6 @@ export default class RestConnector extends BaseConnector {
 		}
 	}
 
-	requestBase = ''
 	requests = []
 
 	request(method, url, params = null, responseType = 'json', body = null, onProgress = null, cancellationToken = null, filename = 'n/a') {
@@ -131,6 +140,8 @@ export default class RestConnector extends BaseConnector {
 	cancelRequests() {
 		this.requests.forEach(request => request.abort());
 	}
+
+	loadPlugins() { }
 
 	async reconnect() {
 		// Cancel pending requests
@@ -327,5 +338,36 @@ export default class RestConnector extends BaseConnector {
 	async getFileInfo(filename) {
 		const response = await this.request('GET', 'machine/fileinfo/' + encodeURIComponent(filename), null, 'json', null, null, null, filename);
 		return new ParsedFileInfo(response);
+	}
+
+	async installPlugin({ zipFilename, zipBlob, plugin, start }) {
+		await this.installSbcPlugin({ zipFilename, zipBlob });
+		if (start) {
+			await this.startSbcPlugin(plugin.name);
+		}
+	}
+
+	async uninstallPlugin(plugin) {
+		await this.uninstallSbcPlugin(plugin.name);
+	}
+
+	async installSbcPlugin({ zipFilename, zipBlob, cancellationToken = null, onProgress }) {
+		await this.request('PUT', 'machine/plugin', null, '', zipBlob, onProgress, cancellationToken, zipFilename);
+	}
+
+	async uninstallSbcPlugin(plugin) {
+		await this.request('DELETE', 'machine/plugin', null, '', plugin);
+	}
+
+	async setSbcPluginData({ plugin, key, value }) {
+		await this.request('PATCH', 'machine/plugin', null, '', { plugin, key, value });
+	}
+
+	async startSbcPlugin(plugin) {
+		await this.request('POST', 'machine/startPlugin', null, '', plugin);
+	}
+
+	async stopSbcPlugin(plugin) {
+		await this.request('POST', 'machine/stopPlugin', null, '', plugin);
 	}
 }

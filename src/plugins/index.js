@@ -1,85 +1,84 @@
 'use strict'
 
-import Vue from 'vue'
-
+// eslint-disable-next-line no-unused-vars
 import { version } from '../../package.json'
-import { PluginManifest } from './manifest.js'
+import { Plugin } from '../store/machine/modelItems.js'
 
-export class Plugin extends PluginManifest {
+// This class is meant only built-in DWC plugins and for dev purposes.
+// Use a standard PluginManifest instance if you want to redistribute your own third-party plugin!
+export class DwcPlugin extends Plugin {
 	constructor(initData) {
 		super(initData);
-		if (initData.loadModule) {
-			this.loadModule = initData.loadModule;
-		}
-	}
-
-	loaded = false
-
-	async loadModule() {
-		// Import JS files
-		for (let i = 0; i < this.jsFiles.length; i++) {
-			const module = await import(
-				/* webpackIgnore: true */
-				`./js/${this.jsFiles[i]}`
-			);
-			Vue.use(module.default);
-		}
-
-		// Import CSS files
-		for (let i = 0; i < this.cssFiles.length; i++) {
-			await import(
-				/* webpackIgnore: true */
-				'./css/' + this.cssFiles[i]
-			);
-		}
-	}
-
-	get dependencies() {
-		let result = []
-		if (this.dwcVersion) {
-			result.push(`DWC=${this.dwcVersion}`);
-			result.concat(this.dwcDependencies);
-		}
-		if (this.dsfVersion) {
-			result.push(`DSF=${this.dsfVersion}`);
-			result.concat(this.sbcPluginDependencies);
-			result.concat(this.sbcDependencies);
-		}
-		if (this.rrfVersion) {
-			result.push(`RRF=${this.rrfVersion}`);
-		}
-		return result.join(', ');
+		this.loadDwcResources = initData.loadDwcResources;
 	}
 }
 
-export default Vue.observable([
-	/*new Plugin({
+export function checkVersion(actual, required) {
+	if (required) {
+		const actualItems = actual.split(/[+.-]/);
+		const requiredItems = required.split(/[+.-]/);
+		for (let i = 0; i < Math.min(actualItems.length, requiredItems.length); i++) {
+			if (actualItems[i] !== requiredItems[i]) {
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
+export function loadDwcResources(plugin, connector) {
+	if (plugin instanceof DwcPlugin) {
+		// Import built-in module from DWC
+		return plugin.loadDwcResources();
+	} else if (process.env.mode !== 'development') {
+		// Import external webpack module
+		window.pluginBeingLoaded = plugin;
+		window.pluginBaseURL = connector.requestBase;
+
+		/* eslint-disable no-undef */
+		return __webpack_require__.e(plugin.dwcWebpackChunk).then(__webpack_require__.bind(null, `./src/plugins/${plugin.dwcWebpackChunk}/index.js`));
+		/* eslint-enable no-undef */
+	} else {
+		throw new Error('Cannot load external plugins in dev mode');
+	}
+}
+
+export default [
+	/*new DwcPlugin({
 		name: 'Auto Update',
 		author: 'Duet3D Ltd',
 		version,
-		loadModule: () => import(
-			/* webpackChunkName: "AutoUpdate" *//*
-			'./AutoUpdate/AutoUpdate.vue'
+		loadDwcResources: () => import(
+			/ webpackChunkName: "AutoUpdate" /
+			'./AutoUpdate/index.js'
 		)
 	}),*/
-	new Plugin({
+	new DwcPlugin({
 		name: 'Height Map',
 		author: 'Duet3D Ltd',
 		version,
-		loadModule: () => import(
+		loadDwcResources: () => import(
 			/* webpackChunkName: "HeightMap" */
-			'./HeightMap/HeightMap.vue'
+			'./HeightMap/index.js'
 		)
 	}),
-	new Plugin({
+	new DwcPlugin({
 		name: 'G-Code Visualizer',
 		author: 'Duet3D Ltd',
 		version,
-		loadModule: () => import(
+		loadDwcResources: () => import(
 			/* webpackChunkName: "Visualizer" */
-			'./Visualizer/Visualizer.vue'
+			'./Visualizer/index.js'
+		)
+	}),
+	new DwcPlugin({
+		name: 'Object Model Browser',
+		author: 'Duet3D Ltd',
+		version,
+		loadDwcResources: () => import(
+			/* webpackChunkName: "ObjectModelBrowser" */
+			'./ObjectModelBrowser'
 		)
 	}),
 	// Add your own plugins here during development...
-])
-
+]
