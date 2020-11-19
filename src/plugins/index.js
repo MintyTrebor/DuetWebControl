@@ -2,6 +2,7 @@
 
 // eslint-disable-next-line no-unused-vars
 import { version } from '../../package.json'
+import store from '../store'
 import { Plugin } from '../store/machine/modelItems.js'
 
 // This class is meant only built-in DWC plugins and for dev purposes.
@@ -43,6 +44,26 @@ export function loadDwcResources(plugin, connector) {
 	}
 }
 
+export const ContextMenuType = {
+	JobFileList: 'jobFileList'
+}
+
+export function registerPluginContextMenuItem(name, path, icon, action, contextMenuType) {
+	store.commit('uiInjection/registerPluginContextMenuItem', {
+		menu: contextMenuType,
+		item: {
+			name: name,
+			path: path,
+			icon: icon,
+			action: action
+		}
+	});
+}
+
+export function injectComponent(name, component) {
+	store.commit('uiInjection/injectComponent', { name, component });
+}
+
 export default [
 	/*new DwcPlugin({
 		name: 'Auto Update',
@@ -77,7 +98,16 @@ export default [
 		version,
 		loadDwcResources: () => import(
 			/* webpackChunkName: "ObjectModelBrowser" */
-			'./ObjectModelBrowser'
+			'./ObjectModelBrowser/index.js'
+		)
+	}),
+	new DwcPlugin({
+		name: 'On-Screen Keyboard',
+		author: 'Duet3D Ltd',
+		version,
+		loadDwcResources: () => import(
+			/* webpackChunkName: "OnScreenKeyboard" */
+			'./OnScreenKeyboard/index.js'
 		)
 	}),
 	// Add your own plugins here during development...

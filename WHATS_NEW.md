@@ -1,6 +1,44 @@
 Summary of important changes in recent versions
 ===============================================
 
+Version 3.2.0-beta3
+===================
+
+Compatible files:
+- DuetSoftwareFramework 3.2.0-b3 or newer
+- RepRapFirmware 2 or newer (1.2x may work but untested)
+
+Changed behaviour:
+- Height Map plugin is loaded by default
+- Last job duration is now displayed on the Job Status page
+- Height Map plugin is automatically loaded if no settings could be loaded
+- Changed default height map viewing angle
+
+Bug fixes:
+- Heightmap wasn't refreshed automatically
+- Text editor wasn't automatically focused when editing a file
+
+Version 3.2.0-beta2
+===================
+
+Compatible files:
+- DuetSoftwareFramework 3.2.0-b2 or newer
+- RepRapFirmware 2 or newer (1.2x may work but untested)
+
+Changed behaviour:
+- robots.txt is no longer part of the SD package
+- Plugins may inject their own plugins into the App component
+- Added new on-screen keyboard plugin (primarily for Raspberry Pi touchscreens)
+
+Bug fixes:
+- When loading the settings from local storage, no plugins were started
+- When loading the heightmap, only an error message could be seen
+- Added missing "Starting" item to the status type enumeration
+- When creating a new macro the new editor was not activated
+- Visualizer wasn't displaying live G-code files correctly
+- Fixes for the new code editor
+- Made plugin loading more robust
+
 Version 3.2.0-beta1
 ===================
 

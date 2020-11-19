@@ -16,7 +16,6 @@ canvas {
 'use strict'
 
 import { mapState, mapActions } from 'vuex'
-
 import { WebGLPreview } from 'gcode-preview'
 import { Color } from 'three'
 
@@ -31,6 +30,7 @@ export default {
 	data() {
 		return {
 			active: true,
+			fileName: null,
 			fileContent: null,
 			lastFilePosition: 0,
 			preview: null
@@ -40,10 +40,23 @@ export default {
 		...mapActions('machine', ['download']),
 		async loadCurrentFile() {
 			if (this.jobFile) {
-				this.fileContent = await this.download({ filename: this.jobFile, type: 'text' });
-				this.preview.clear();
-				this.preview.processGCode(this.fileContent.substring(0, this.filePosition || this.fileSize));
-				this.lastFilePosition = this.filePosition;
+				await this.loadFile(this.jobFile);
+			}
+		},
+		async loadFile(file) {
+			this.fileName = file;
+			this.fileContent = await this.download({ filename: file, type: 'text' });
+			this.preview.clear();
+			if (file === this.jobFile) {
+				if (this.filePosition) {
+					this.preview.processGCode(this.fileContent.substring(0, this.filePosition));
+					this.lastFilePosition = this.filePosition;
+				} else {
+					this.lastFilePosition = 0;
+				}
+			} else {
+				this.preview.processGCode(this.fileContent);
+				this.lastFilePosition = 0;
 			}
 		},
 		resize() {
@@ -57,8 +70,7 @@ export default {
 			canvas: this.$refs.preview,
 			limit: Infinity,
 			topLayerColor: new Color('lime').getHex(),
-			lastSegmentColor: new Color('red').getHex(),
-			lineWidth: 0.01
+			lastSegmentColor: new Color('red').getHex()
 		});
 
 		this.loadCurrentFile();
@@ -75,7 +87,7 @@ export default {
 	},
 	watch: {
 		filePosition(to) {
-			if (this.active && to > 0) {
+			if (this.active && this.jobFile === this.fileName && to > 0) {
 				if (this.fileContent) {
 					this.preview.processGCode(this.fileContent.substring(this.lastFilePosition, to));
 				}

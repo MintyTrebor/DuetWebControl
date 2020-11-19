@@ -132,6 +132,8 @@ textarea {
 		<connect-dialog></connect-dialog>
 		<connection-dialog></connection-dialog>
 		<messagebox-dialog></messagebox-dialog>
+
+		<component v-for="component in injectedComponentNames" :is="component" :key="component"></component>
 	</v-app>
 </template>
 
@@ -156,7 +158,9 @@ export default {
 			status: state => state.machine.model.state.status,
 
 			darkTheme: state => state.settings.darkTheme,
-			webcam: state => state.settings.webcam
+			webcam: state => state.settings.webcam,
+
+			injectedComponents: state => state.uiInjection.injectedComponents
 		}),
 		...mapGetters('machine', ['hasTemperaturesToDisplay']),
 		...mapGetters('machine/model', ['jobProgress']),
@@ -189,7 +193,8 @@ export default {
 		return {
 			drawer: this.$vuetify.breakpoint.lgAndUp,
 			hideGlobalContainer: false,
-			wasXs: this.$vuetify.breakpoint.xsOnly
+			wasXs: this.$vuetify.breakpoint.xsOnly,
+			injectedComponentNames: []
 		}
 	},
 	methods: {
@@ -271,6 +276,14 @@ export default {
 				Piecon.setProgress(to * 100);
 			}
 			this.updateTitle();
+		},
+		injectedComponents() {
+			this.injectedComponents.forEach(function(item) {
+				if (this.injectedComponentNames.indexOf(item.name) === -1) {
+					this.$options.components[item.name] = item.component;
+					this.injectedComponentNames.push(item.name);
+				}
+			}, this);
 		}
 	}
 }

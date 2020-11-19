@@ -135,6 +135,13 @@ export const KinematicsName = {
 	unknown: 'unknown'
 }
 
+export const LogLevel = {
+	debug: 'debug',
+	info: 'info',
+	warn: 'warn',
+	off: 'off'
+}
+
 export const MachineMode = {
 	fff: 'FFF',
 	cnc: 'CNC',
@@ -174,6 +181,7 @@ export const ProbeType = {
 }
 
 export const StatusType = {
+	starting: 'starting',
 	updating: 'updating',
 	off: 'off',
 	halted: 'halted',

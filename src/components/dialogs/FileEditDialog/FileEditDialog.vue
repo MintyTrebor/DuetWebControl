@@ -14,6 +14,7 @@
 .CodeMirror-scroll {
 	display: flex;
 	flex-grow: 1;
+	height: unset;
 	width: 100%;
 }
 
@@ -42,7 +43,7 @@
 </style>
 
 <template>
-	<v-dialog :value="shown" @input="$emit('update:shown', $event)" fullscreen hide-overlay transition="dialog-bottom-transition">
+	<v-dialog :value="shown" @input="$emit('update:shown', $event)" fullscreen hide-overlay persistent no-click-animation transition="dialog-bottom-transition">
 		<v-card class="d-flex flex-column">
 			<v-app-bar flat dark color="primary" class="flex-grow-0 flex-shrink-1">
 				<v-btn icon dark @click="close(false)">
@@ -65,7 +66,7 @@
 
 			<codemirror v-if="useEditor"
 						ref="cmEditor" :options="cmOptions"
-						v-model="innerValue" @blur.passive="valueChanged = (value != innerValue)"
+						v-model="innerValue" @changes="valueChanged = true"
 						@keydown.esc.prevent.stop="close(false)"></codemirror>
 			<v-textarea v-else
 						ref="textarea" hide-details solo :rows="null" class="edit-textarea"
@@ -115,7 +116,6 @@ export default {
 		...mapState('settings', ['darkTheme']),
 		cmOptions() {
 			return {
-				autofocus: true,
 				mode: 'application/x-gcode',
 				theme: this.darkTheme ? 'blackboard' : 'default',
 				lineNumbers: true,
@@ -180,16 +180,33 @@ export default {
 	watch: {
 		shown(to) {
 			// Update textarea
-			this.valueChanged = false;
-			this.useEditor = this.value.length < maxEditorFileSize && this.isGCode;
+			this.useEditor = (!this.value || this.value.length < maxEditorFileSize) && this.isGCode && !window.disableCodeMirror;
 			this.innerValue = this.value || '';
+			this.$nextTick(() => this.valueChanged = false);
 
 			if (to) {
+				// If using the editor, scroll to the top again to avoid glitches
+				setTimeout(() => {
+					if (this.$refs.cmEditor) {
+						this.$refs.cmEditor.cminstance.scrollTo(0, 0)
+						this.$refs.cmEditor.cminstance.focus();
+					} else {
+						this.$refs.textarea.focus();
+					}
+				}, 250);
+
 				// Add notification for users in case changes have not been saved yet
 				window.addEventListener('beforeunload', this.onBeforeLeave);
 			} else {
 				// ... and turn it off again when the dialog is hidden
 				window.removeEventListener('beforeunload', this.onBeforeLeave);
+
+				// Remove focus again to close the OSK
+				if (this.$refs.cmEditor) {
+					this.$refs.cmEditor.cminstance.getTextArea().blur();
+				} else {
+					this.$refs.textarea.blur();
+				}
 			}
 		}
 	}
